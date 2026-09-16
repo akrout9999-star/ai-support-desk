@@ -19,16 +19,12 @@ const publicUser = (user) => ({
 })
 
 function createToken(user) {
-  return jwt.sign(
-    {},
-    process.env.JWT_SECRET,
-    {
-      subject: String(user.id),
-      expiresIn: '7d',
-      issuer: 'support-os',
-      algorithm: 'HS256',
-    },
-  )
+  return jwt.sign({}, process.env.JWT_SECRET, {
+    subject: String(user.id),
+    expiresIn: '7d',
+    issuer: 'support-os',
+    algorithm: 'HS256',
+  })
 }
 
 router.post('/register', async (req, res, next) => {
@@ -38,66 +34,35 @@ router.post('/register', async (req, res, next) => {
   const passwordBytes = Buffer.byteLength(password, 'utf8')
 
   if (name.length < 2 || name.length > 80) {
-    return res.status(400).json({
-      message: 'Name must be between 2 and 80 characters',
-    })
+    return res.status(400).json({ message: 'Name must be between 2 and 80 characters' })
   }
-
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({
-      message: 'Enter a valid email address',
-    })
+    return res.status(400).json({ message: 'Enter a valid email address' })
   }
-
   if (password.length < 8) {
-    return res.status(400).json({
-      message: 'Password must be at least 8 characters',
-    })
+    return res.status(400).json({ message: 'Password must be at least 8 characters' })
   }
-
   if (passwordBytes > 72) {
-    return res.status(400).json({
-      message: 'Password is too long',
-    })
-  }
-
-  const existingUser = db
-    .prepare('SELECT id FROM users WHERE email = ?')
-    .get(email)
-
-  if (existingUser) {
-    return res.status(409).json({
-      message: 'An account with this email already exists',
-    })
+    return res.status(400).json({ message: 'Password is too long' })
   }
 
   try {
     const passwordHash = await bcrypt.hash(password, 12)
-    const result = db
-      .prepare(`
-        INSERT INTO users (name, email, password_hash, role)
-        VALUES (?, ?, ?, 'customer')
-      `)
-      .run(name, email, passwordHash)
+    const result = await db.query(`
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ($1, $2, $3, 'customer')
+      RETURNING id, name, email, role, created_at
+    `, [name, email, passwordHash])
 
-    const user = db
-      .prepare(`
-        SELECT id, name, email, role, created_at
-        FROM users
-        WHERE id = ?
-      `)
-      .get(result.lastInsertRowid)
-
+    const user = result.rows[0]
     return res.status(201).json({
       message: 'Account created successfully',
       token: createToken(user),
       user: publicUser(user),
     })
   } catch (error) {
-    if (String(error.code || '').startsWith('SQLITE_CONSTRAINT')) {
-      return res.status(409).json({
-        message: 'An account with this email already exists',
-      })
+    if (error.code === '23505') {
+      return res.status(409).json({ message: 'An account with this email already exists' })
     }
     return next(error)
   }
@@ -108,26 +73,18 @@ router.post('/login', async (req, res, next) => {
   const password = typeof req.body.password === 'string' ? req.body.password : ''
 
   if (!email || !password) {
-    return res.status(400).json({
-      message: 'Email and password are required',
-    })
+    return res.status(400).json({ message: 'Email and password are required' })
   }
-
   if (email.length > 254 || Buffer.byteLength(password, 'utf8') > 72) {
-    return res.status(401).json({
-      message: 'Invalid email or password',
-    })
+    return res.status(401).json({ message: 'Invalid email or password' })
   }
 
   try {
-    const user = db
-      .prepare('SELECT * FROM users WHERE email = ?')
-      .get(email)
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [email])
+    const user = result.rows[0]
 
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
-      return res.status(401).json({
-        message: 'Invalid email or password',
-      })
+      return res.status(401).json({ message: 'Invalid email or password' })
     }
 
     return res.json({
@@ -141,9 +98,7 @@ router.post('/login', async (req, res, next) => {
 })
 
 router.get('/me', authenticate, (req, res) => {
-  res.json({
-    user: publicUser(req.user),
-  })
+  res.json({ user: publicUser(req.user) })
 })
 
 module.exports = router
