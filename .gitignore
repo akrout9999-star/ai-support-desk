@@ -1,0 +1,34 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+**/node_modules/
+
+# Frontend build output / tool caches
+frontend/dist/
+frontend/dist-ssr/
+**/.vite/
+.eslintcache
+coverage/
+
+# Runtime SQLite data
+backend/database/*.db
+backend/database/*.db-wal
+backend/database/*.db-shm
+backend/database/*.db-journal
+
+# Logs and local files
+*.log
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Editor / local tooling
+.vscode/
+.idea/
