@@ -15,22 +15,36 @@ class ApiError extends Error {
 }
 
 async function api(path, options = {}, token = '') {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
-  })
+  try {
+    const response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
+    })
 
-  const data = await response.json().catch(() => ({}))
+    const data = await response.json().catch(() => ({}))
 
-  if (!response.ok) {
-    throw new ApiError(data.message || 'Something went wrong', response.status)
+    if (!response.ok) {
+      throw new ApiError(
+        data.message || 'Something went wrong',
+        response.status,
+      )
+    }
+
+    return data
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error
+    }
+
+    throw new ApiError(
+      'Unable to reach the server. It may be waking up — please try again in a moment.',
+      0,
+    )
   }
-
-  return data
 }
 
 const ticketId = (id) => `T-${String(id).padStart(4, '0')}`
@@ -926,7 +940,7 @@ export default function App() {
     return (
       <div className="boot">
         <div className="brand"><span className="brand-mark">S</span><span>SUPPORT/OS</span></div>
-        <span>Securing workspace…</span>
+        <span>Connecting to support workspace…</span>
       </div>
     )
   }
