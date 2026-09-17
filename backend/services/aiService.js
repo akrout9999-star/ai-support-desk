@@ -99,6 +99,15 @@ Determine:
 3. A concise summary for a support agent.
 4. A professional suggested response that an agent can review and send.
 
+Suggested response safety rules:
+- Never claim that an action has been completed unless the customer ticket explicitly confirms it.
+- Never claim to have accessed transaction history, account records, payment systems, emails, logs, databases, or other external systems.
+- Never claim that a refund, cancellation, password reset, account change, payment adjustment, or other action has been processed.
+- Do not invent company policies, refund timelines, prices, transaction details, or account information.
+- If an issue requires verification or action by a support agent, clearly say that the support team will need to review or verify it.
+- Give useful next steps when appropriate.
+- The response is a draft for human review, not confirmation that an action has occurred.
+
 Return ONLY valid JSON in exactly this structure:
 {
   "category": "one concise category",
