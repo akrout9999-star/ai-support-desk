@@ -1,38 +1,54 @@
 # SUPPORT/OS — AI Support Desk
 
-SUPPORT/OS is a full-stack AI-assisted customer support platform that combines secure ticket management with Gemini-powered support diagnostics and a human-review workflow.
+SUPPORT/OS is a full-stack AI-assisted customer support platform built around a human-in-the-loop workflow.
 
-Customers can create and track their own support requests, while support agents manage the queue, analyze tickets with AI, edit suggested responses, approve replies, and move tickets through the support lifecycle.
+Customers can create and track support requests, while support agents manage a centralized queue, use Gemini to analyze tickets, review and edit AI-generated response drafts, approve customer-facing replies, and move tickets through the support lifecycle.
+
+🌐 **Live Demo:** https://ai-support-desk.pages.dev
+
+> **Note:** The backend is hosted on Render's free tier and may take a short time to wake up after a period of inactivity.
+
+---
 
 ## Features
 
 ### Customer Portal
+
 - Secure customer registration and login
 - Create support tickets
-- View only tickets belonging to the logged-in customer
-- Track ticket status: Open, In Progress, and Resolved
+- Customer-isolated ticket access
+- Track tickets through Open, In Progress, and Resolved states
 - View support responses only after agent approval
 - Dashboard statistics for total, active, and resolved requests
+- Persistent ticket history across sessions
 
 ### Support Agent Workspace
-- Dedicated role-protected agent dashboard
-- View and search the support queue
+
+- Role-protected agent dashboard
+- Centralized support queue
+- Search tickets by issue or customer information
 - Filter tickets by status
-- Update ticket status
-- Delete tickets
-- Review customer information and conversations
+- Update ticket lifecycle
+- Review customer requests
 - Edit and save response drafts
 - Approve responses before customer delivery
+- Delete tickets
+- AI-assisted ticket diagnostics
 
 ### Gemini AI Copilot
-Agents can run AI analysis on a support request to generate:
+
+Support agents can run AI analysis on a ticket to generate:
 
 - Category
 - Priority
 - Concise issue summary
 - Suggested customer response
 
-AI-generated responses are not sent directly to customers. An agent reviews, edits, and explicitly approves the response before it becomes visible in the Customer Portal.
+AI output is treated as a **draft**, not an automatic customer response.
+
+The support agent remains responsible for reviewing, editing, and explicitly approving the response before it becomes visible to the customer.
+
+---
 
 ## Human-in-the-Loop Workflow
 
@@ -49,40 +65,108 @@ Human agent reviews / edits response
         ↓
 Agent approves response
         ↓
-Customer receives approved reply
+Ticket moves to In Progress
         ↓
-Ticket progresses toward resolution
+Customer sees approved response
+        ↓
+Agent resolves ticket
 ```
+
+This design keeps AI in an assistive role while preserving human control over customer-facing communication.
+
+---
+
+## AI Safety
+
+The Gemini system prompt includes safeguards designed to prevent unsupported claims in customer responses.
+
+The AI is instructed not to:
+
+- Claim that refunds, cancellations, password resets, or account changes have already been completed
+- Claim access to transaction history, account data, emails, logs, databases, or other external systems
+- Invent company policies, prices, timelines, or operational details
+- Present a draft response as confirmation that an action has occurred
+
+When verification or action is required, the generated response directs the issue toward human support review.
+
+---
 
 ## Tech Stack
 
 ### Frontend
-- React 19
+
+- React
 - Vite
 - JavaScript
 - CSS
 - Fetch API
+- Cloudflare Pages
 
 ### Backend
+
 - Node.js
 - Express.js
 - JWT authentication
 - bcryptjs
-- Google Gemini API
+- Google Gemini API (`@google/genai`)
+- Render
 
 ### Database
-- SQLite
-- better-sqlite3
+
+- PostgreSQL
+- Neon
+
+---
+
+## Architecture
+
+```text
+┌─────────────────────────────┐
+│        React Frontend       │
+│      Cloudflare Pages       │
+└──────────────┬──────────────┘
+               │ HTTPS / REST
+               ▼
+┌─────────────────────────────┐
+│       Express REST API      │
+│           Render            │
+├─────────────────────────────┤
+│ Authentication / RBAC       │
+│ Ticket Management           │
+│ Human Approval Workflow     │
+│ Gemini AI Integration       │
+└──────────┬───────────┬──────┘
+           │           │
+           ▼           ▼
+┌────────────────┐  ┌────────────────┐
+│ Neon           │  │ Google Gemini  │
+│ PostgreSQL     │  │ AI             │
+└────────────────┘  └────────────────┘
+```
+
+The Gemini API key and database credentials remain server-side and are never exposed to the browser.
+
+---
 
 ## Authentication & Authorization
 
-SUPPORT/OS uses JWT-based authentication with separate Customer and Agent roles.
+SUPPORT/OS uses JWT-based authentication with separate **Customer** and **Agent** roles.
 
-The backend enforces authorization rather than relying only on frontend routing.
+Authorization is enforced by the backend rather than relying only on frontend routing.
 
-Customers can access only their own tickets, while agent-only operations such as AI analysis, status management, reply approval, and deletion are protected by role-based middleware.
+Customers can access only tickets associated with their authenticated account.
+
+Agent-only operations include:
+
+- AI analysis
+- Status management
+- Response draft management
+- Response approval
+- Ticket deletion
 
 Passwords are stored as bcrypt hashes.
+
+---
 
 ## Ticket Lifecycle
 
@@ -90,9 +174,15 @@ Passwords are stored as bcrypt hashes.
 Open → In Progress → Resolved
 ```
 
-Each ticket can also contain internal AI-generated information such as category, priority, summary, and a suggested response.
+New tickets begin in the **Open** state.
 
-These internal fields are available to support agents but are not exposed to customers. Customers receive only an approved support response.
+When an agent approves a customer response, an Open ticket automatically moves to **In Progress**. Agents can then mark the ticket as **Resolved** when the support process is complete.
+
+Each ticket may also contain internal AI-generated information such as category, priority, summary, and suggested response.
+
+These internal AI fields are available to agents but are not exposed to customers. Customers receive only an explicitly approved support response.
+
+---
 
 ## API Overview
 
@@ -112,13 +202,18 @@ PATCH  /api/tickets/:id/reply/approve
 DELETE /api/tickets/:id
 ```
 
-Access to ticket endpoints depends on the authenticated user's role and ticket ownership.
+Endpoint access depends on the authenticated user's role and, for customer requests, ticket ownership.
+
+---
 
 ## Environment Variables
 
-Create a `.env` file inside the `backend` directory.
+Create a `.env` file inside the backend directory and configure the variables required by the deployment.
+
+Example:
 
 ```env
+DATABASE_URL=your_postgresql_connection_string
 GEMINI_API_KEY=your_gemini_api_key
 JWT_SECRET=your_long_random_jwt_secret
 
@@ -129,16 +224,22 @@ AGENT_PASSWORD=your_secure_agent_password
 CLIENT_ORIGIN=http://localhost:5173
 ```
 
-Never commit the real `.env` file or production credentials.
+For the frontend:
 
-The repository includes `.env.example` files to document required configuration safely.
+```env
+VITE_API_URL=http://localhost:5000/api
+```
+
+Never commit real `.env` files, API keys, database credentials, JWT secrets, or production passwords to source control.
+
+---
 
 ## Running Locally
 
 ### 1. Clone the repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/akrout9999-star/ai-support-desk.git
 cd ai-support-desk
 ```
 
@@ -149,15 +250,13 @@ cd backend
 npm install
 ```
 
-Create the backend `.env` file using `.env.example` as a reference.
-
-Start the API:
+Configure the backend environment variables, then start the API:
 
 ```bash
 npm start
 ```
 
-The backend runs on:
+By default, the backend runs on:
 
 ```text
 http://localhost:5000
@@ -173,44 +272,125 @@ npm install
 npm run dev
 ```
 
-The development frontend is available through the URL displayed by Vite.
+Vite will display the local frontend URL in the terminal.
+
+---
+
+## Production Deployment
+
+The production application uses separate frontend, backend, database, and AI services:
+
+```text
+Frontend  → Cloudflare Pages
+Backend   → Render
+Database  → Neon PostgreSQL
+AI        → Google Gemini
+```
+
+Production frontend:
+
+**https://ai-support-desk.pages.dev**
+
+The frontend communicates with the deployed REST API through the `VITE_API_URL` environment variable.
+
+---
 
 ## Production Validation
 
-Frontend code can be checked with:
+The frontend can be validated with:
 
 ```bash
 npm run lint
 npm run build
 ```
 
-The application has been tested through the complete workflow from customer ticket creation to AI analysis, human approval, and customer-visible resolution.
+The deployed application has been tested through the complete workflow:
+
+```text
+Customer registration/login
+        ↓
+Ticket creation
+        ↓
+Database persistence
+        ↓
+Agent queue
+        ↓
+Gemini AI analysis
+        ↓
+Human review/edit
+        ↓
+Response approval
+        ↓
+Customer-visible response
+        ↓
+Ticket resolution
+```
+
+Ticket data persists across refreshes and authentication sessions through PostgreSQL.
+
+---
 
 ## Security Considerations
 
-- Password hashing with bcrypt
+- bcrypt password hashing
 - JWT-based authentication
 - Role-based API authorization
-- Customer-level ticket ownership checks
+- Customer-level ticket ownership enforcement
 - Agent-only administrative operations
-- Server-side Gemini API integration
+- Parameterized PostgreSQL queries
+- Server-side Gemini integration
 - Environment-based secrets
 - Internal AI diagnostics hidden from customers
-- Human approval required before AI-assisted replies reach customers
+- Human approval required before AI-assisted responses reach customers
+- Production CORS configuration
+
+---
 
 ## Screenshots
 
-Screenshots of the Customer Portal and Support Agent Workspace will be added with the public deployment.
+### Customer Portal
 
-## Live Demo
+Customers can create support requests, monitor their status, and view approved responses from the support team.
 
-Deployment link coming soon.
+### Agent Workspace
+
+Agents can manage the support queue, run AI diagnostics, review suggested responses, approve customer-facing replies, and resolve tickets.
+
+---
+
+## Future Improvements
+
+Potential extensions include:
+
+- Threaded customer-agent conversations
+- File attachments
+- Email or in-app notifications
+- SLA tracking
+- Support analytics
+- Ticket assignment across multiple agents
+- Automated testing and CI/CD validation
+
+---
 
 ## Project Status
 
-Core application development is complete.
+**Core application complete and deployed.**
 
-Current functionality includes authentication, customer-isolated ticket management, agent operations, Gemini AI analysis, human-reviewed responses, SQLite persistence, responsive UI, loading and error states, and production frontend validation.
+SUPPORT/OS currently includes:
+
+- Full-stack authentication
+- Customer and agent roles
+- Persistent PostgreSQL ticket storage
+- Customer-isolated ticket access
+- Agent support operations
+- Gemini-powered AI analysis
+- Human-reviewed AI responses
+- Ticket lifecycle management
+- Search and status filtering
+- Loading and error states
+- Production frontend and backend deployment
+
+---
 
 ## Author
 
