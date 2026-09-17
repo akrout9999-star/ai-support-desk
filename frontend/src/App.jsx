@@ -950,4 +950,4 @@ export default function App() {
   return session.user.role === 'agent'
     ? <AgentPortal session={session} onLogout={logout} />
     : <CustomerPortal session={session} onLogout={logout} />
-}
+  }
