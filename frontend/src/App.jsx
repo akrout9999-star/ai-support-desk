@@ -81,6 +81,14 @@ function Notice({ children, onClose }) {
   )
 }
 
+function SiteFooter() {
+  return (
+    <footer className="site-footer">
+      Built by <strong>Asish</strong> · © 2026
+    </footer>
+  )
+}
+
 function AuthScreen({ onAuthenticated }) {
   const [mode, setMode] = useState('login')
   const [form, setForm] = useState({ name: '', email: '', password: '' })
@@ -208,6 +216,7 @@ function AuthScreen({ onAuthenticated }) {
             </button>
           </div>
         </form>
+        <SiteFooter />
       </section>
     </main>
   )
@@ -244,6 +253,7 @@ function Shell({ user, onLogout, children }) {
         </div>
       </header>
       {children}
+      <SiteFooter />
     </div>
   )
 }

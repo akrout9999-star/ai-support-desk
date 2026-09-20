@@ -348,13 +348,21 @@ Ticket data persists across refreshes and authentication sessions through Postgr
 
 ## Screenshots
 
+### Sign In
+
+![SUPPORT/OS sign-in screen](docs/screenshots/login.png)
+
 ### Customer Portal
 
 Customers can create support requests, monitor their status, and view approved responses from the support team.
 
-### Agent Workspace
+![SUPPORT/OS customer dashboard](docs/screenshots/customer-dashboard.png)
+
+### Agent Workspace + AI Copilot
 
 Agents can manage the support queue, run AI diagnostics, review suggested responses, approve customer-facing replies, and resolve tickets.
+
+![SUPPORT/OS agent workspace with AI Copilot](docs/screenshots/agent-ai-copilot.png)
 
 ---
 
